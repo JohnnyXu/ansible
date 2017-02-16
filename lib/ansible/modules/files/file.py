@@ -31,7 +31,7 @@ extends_documentation_fragment: files
 description:
      - Sets attributes of files, symlinks, and directories, or removes
        files/symlinks/directories. Many other modules support the same options as
-       the M(file) module - including M(copy), M(template), and M(assemble).
+       the C(file) module - including M(copy), M(template), and M(assemble).
 notes:
     - See also M(copy), M(template), M(assemble)
 requirements: [ ]
@@ -53,7 +53,7 @@ options:
         or M(template) module if you want that behavior.  If C(link), the symbolic
         link will be created or changed. Use C(hard) for hardlinks. If C(absent),
         directories will be recursively deleted, and files or symlinks will be unlinked.
-        Note that M(file) will not fail if the C(path) does not exist as the state did not change.
+        Note that C(file) will not fail if the C(path) does not exist as the state did not change.
         If C(touch) (new in 1.4), an empty file will be created if the C(path) does not
         exist, while an existing file or directory will receive updated file access and
         modification times (similar to the way `touch` works from the command line).
@@ -201,6 +201,7 @@ def main():
 
     params = module.params
     state = params['state']
+    recurse = params['recurse']
     force = params['force']
     diff_peek = params['diff_peek']
     src = params['src']
@@ -231,6 +232,8 @@ def main():
     if state is None:
         if prev_state != 'absent':
             state = prev_state
+        elif recurse:
+            state = 'directory'
         else:
             state = 'file'
 
@@ -246,7 +249,7 @@ def main():
                 module.fail_json(msg='src and dest are required for creating links')
 
     # original_basename is used by other modules that depend on file.
-    if os.path.isdir(b_path) and state not in ("link", "absent"):
+    if state not in ("link", "absent") and os.path.isdir(b_path):
         basename = None
         if params['original_basename']:
             basename = params['original_basename']
@@ -257,7 +260,6 @@ def main():
             b_path = to_bytes(path, errors='surrogate_or_strict')
 
     # make sure the target path is a directory when we're doing a recursive operation
-    recurse = params['recurse']
     if recurse and state != 'directory':
         module.fail_json(path=path, msg="recurse option requires state to be 'directory'")
 
@@ -362,7 +364,7 @@ def main():
 
     elif state in ('link', 'hard'):
 
-        if os.path.isdir(b_path) and not os.path.islink(b_path):
+        if not os.path.islink(b_path) and os.path.isdir(b_path):
             relpath = path
         else:
             b_relpath = os.path.dirname(b_path)
@@ -370,7 +372,7 @@ def main():
 
         absrc = os.path.join(relpath, src)
         b_absrc = to_bytes(absrc, errors='surrogate_or_strict')
-        if not os.path.exists(b_absrc) and not force:
+        if not force and not os.path.exists(b_absrc):
             module.fail_json(path=path, src=src, msg='src file does not exist, use "force=yes" if you really want to create the link: %s' % absrc)
 
         if state == 'hard':

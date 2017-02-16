@@ -1,29 +1,23 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.pycompat24 import get_exception
-
-"""
-(c) 2016, Ben Doherty <bendohmv@gmail.com>
-Sponsored by Oomph, Inc. http://www.oomphinc.com
-
-This file is part of Ansible
-
-Ansible is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Ansible is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-"""
+# (c) 2016, Ben Doherty <bendohmv@gmail.com>
+# Sponsored by Oomph, Inc. http://www.oomphinc.com
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
@@ -36,7 +30,7 @@ version_added: 2.3
 short_description: Creates a compressed archive of one or more files or trees.
 extends_documentation_fragment: files
 description:
-     - The M(archive) module packs an archive. It is the opposite of the unarchive module. By default, it assumes the compression source exists on the target. It will not copy the source file from the local system to the target before archiving. Source files can be deleted after archival by specifying C(remove)=I(True).
+     - Packs an archive. It is the opposite of M(unarchive). By default, it assumes the compression source exists on the target. It will not copy the source file from the local system to the target before archiving. Source files can be deleted after archival by specifying I(remove=True).
 options:
   path:
     description:
@@ -44,7 +38,7 @@ options:
     required: true
   format:
     description:
-      - The type of compression to use. Can be 'gz', 'bz2', or 'zip'.
+      - The type of compression to use.
     choices: [ 'gz', 'bz2', 'zip' ]
     default: 'gz'
   dest:
@@ -55,7 +49,6 @@ options:
   remove:
     description:
       - Remove any added source files and trees after adding to archive.
-    type: bool
     required: false
     default: false
 
@@ -125,6 +118,9 @@ import bz2
 import filecmp
 import zipfile
 import tarfile
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.pycompat24 import get_exception
+
 
 def main():
     module = AnsibleModule(

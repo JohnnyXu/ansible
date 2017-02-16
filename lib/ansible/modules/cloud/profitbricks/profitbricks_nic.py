@@ -107,7 +107,8 @@ uuid_match = re.compile(
 
 
 def _wait_for_completion(profitbricks, promise, wait_timeout, msg):
-    if not promise: return
+    if not promise:
+        return
     wait_timeout = time.time() + wait_timeout
     while wait_timeout > time.time():
         time.sleep(5)
@@ -240,7 +241,7 @@ def main():
             name=dict(default=str(uuid.uuid4()).replace('-','')[:10]),
             lan=dict(),
             subscription_user=dict(),
-            subscription_password=dict(),
+            subscription_password=dict(no_log=True),
             wait=dict(type='bool', default=True),
             wait_timeout=dict(type='int', default=600),
             state=dict(default='present'),

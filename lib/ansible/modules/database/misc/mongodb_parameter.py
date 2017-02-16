@@ -113,7 +113,7 @@ after:
     type: string
 '''
 
-import ConfigParser
+import os
 
 try:
     from pymongo.errors import ConnectionFailure
@@ -130,13 +130,17 @@ except ImportError:
 else:
     pymongo_found = True
 
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.pycompat24 import get_exception
+from ansible.module_utils.six.moves import configparser
+
 
 # =========================================
 # MongoDB module specific support methods.
 #
 
 def load_mongocnf():
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     mongocnf = os.path.expanduser('~/.mongodb.cnf')
 
     try:
@@ -145,7 +149,7 @@ def load_mongocnf():
             user=config.get('client', 'user'),
             password=config.get('client', 'pass')
         )
-    except (ConfigParser.NoOptionError, IOError):
+    except (configparser.NoOptionError, IOError):
         return False
 
     return creds
@@ -231,9 +235,5 @@ def main():
                          after=value)
 
 
-# import module snippets
-from ansible.module_utils.basic import *
-from ansible.module_utils.pycompat24 import get_exception
-
 if __name__ ==  '__main__':
-     main()
+    main()

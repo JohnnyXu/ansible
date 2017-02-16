@@ -32,7 +32,7 @@ description:
     from a template file onto a remote device running Junos.  The
     module will return the differences in configuration if the diff
     option is specified on the Ansible command line
-deprecated: Deprecated in 2.2. Use junos_config instead
+deprecated: Deprecated in 2.2. Use M(junos_config) instead.
 extends_documentation_fragment: junos
 options:
   src:
@@ -99,10 +99,12 @@ EXAMPLES = """
     comment: update system config
 
 - name: replace config hierarchy
+  junos_template:
     src: config.j2
     action: replace
 
 - name: overwrite the config
+  junos_template:
     src: config.j2
     action: overwrite
 """

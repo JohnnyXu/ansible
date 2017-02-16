@@ -182,15 +182,15 @@ EXAMPLES = '''
 
 # Rolling ASG Updates
 
-Below is an example of how to assign a new launch config to an ASG and terminate old instances.
-
-All instances in "myasg" that do not have the launch configuration named "my_new_lc" will be terminated in
-a rolling fashion with instances using the current launch configuration, "my_new_lc".
-
-This could also be considered a rolling deploy of a pre-baked AMI.
-
-If this is a newly created group, the instances will not be replaced since all instances
-will have the current launch configuration.
+# Below is an example of how to assign a new launch config to an ASG and terminate old instances.
+#
+# All instances in "myasg" that do not have the launch configuration named "my_new_lc" will be terminated in
+# a rolling fashion with instances using the current launch configuration, "my_new_lc".
+#
+# This could also be considered a rolling deploy of a pre-baked AMI.
+#
+# If this is a newly created group, the instances will not be replaced since all instances
+# will have the current launch configuration.
 
 - name: create launch config
   ec2_lc:
@@ -213,8 +213,8 @@ will have the current launch configuration.
     desired_capacity: 5
     region: us-east-1
 
-To only replace a couple of instances instead of all of them, supply a list
-to "replace_instances":
+# To only replace a couple of instances instead of all of them, supply a list
+# to "replace_instances":
 
 - ec2_asg:
     name: myasg
@@ -306,6 +306,8 @@ def get_properties(autoscaling_group):
                 properties['terminating_instances'] += 1
             if i.lifecycle_state == 'Pending':
                 properties['pending_instances'] += 1
+    else:
+        properties['instances'] = []
     properties['instance_facts'] = instance_facts
     properties['load_balancers'] = autoscaling_group.load_balancers
 
@@ -473,21 +475,21 @@ def create_autoscaling_group(connection, module):
         if len(launch_configs) == 0:
             module.fail_json(msg="No launch config found with name %s" % launch_config_name)
         ag = AutoScalingGroup(
-                 group_name=group_name,
-                 load_balancers=load_balancers,
-                 availability_zones=availability_zones,
-                 launch_config=launch_configs[0],
-                 min_size=min_size,
-                 max_size=max_size,
-                 placement_group=placement_group,
-                 desired_capacity=desired_capacity,
-                 vpc_zone_identifier=vpc_zone_identifier,
-                 connection=connection,
-                 tags=asg_tags,
-                 health_check_period=health_check_period,
-                 health_check_type=health_check_type,
-                 default_cooldown=default_cooldown,
-                 termination_policies=termination_policies)
+            group_name=group_name,
+            load_balancers=load_balancers,
+            availability_zones=availability_zones,
+            launch_config=launch_configs[0],
+            min_size=min_size,
+            max_size=max_size,
+            placement_group=placement_group,
+            desired_capacity=desired_capacity,
+            vpc_zone_identifier=vpc_zone_identifier,
+            connection=connection,
+            tags=asg_tags,
+            health_check_period=health_check_period,
+            health_check_type=health_check_type,
+            default_cooldown=default_cooldown,
+            termination_policies=termination_policies)
 
         try:
             connection.create_auto_scaling_group(ag)
@@ -586,6 +588,7 @@ def create_autoscaling_group(connection, module):
 def delete_autoscaling_group(connection, module):
     group_name = module.params.get('name')
     notification_topic = module.params.get('notification_topic')
+    wait_for_instances = module.params.get('wait_for_instances')
 
     if notification_topic:
         ag.delete_notification_configuration(notification_topic)
@@ -593,6 +596,11 @@ def delete_autoscaling_group(connection, module):
     groups = connection.get_all_groups(names=[group_name])
     if groups:
         group = groups[0]
+
+        if not wait_for_instances:
+            group.delete(True)
+            return True
+
         group.max_size = 0
         group.min_size = 0
         group.desired_capacity = 0
@@ -609,11 +617,9 @@ def delete_autoscaling_group(connection, module):
         group.delete()
         while len(connection.get_all_groups(names=[group_name])):
             time.sleep(5)
-        changed=True
-        return changed
-    else:
-        changed=False
-        return changed
+        return True
+
+    return False
 
 def get_chunks(l, n):
     for i in xrange(0, len(l), n):
@@ -644,7 +650,7 @@ def replace(connection, module):
     instances = props['instances']
     if replace_instances:
         instances = replace_instances
-        
+
     #check if min_size/max_size/desired capacity have been specified and if not use ASG values
     if min_size is None:
         min_size = as_group.min_size
@@ -674,7 +680,7 @@ def replace(connection, module):
     if not old_instances:
         changed = False
         return(changed, props)
-      
+
     # set temporary settings and wait for them to be reached
     # This should get overwritten if the number of instances left is less than the batch size.
 
@@ -827,7 +833,7 @@ def wait_for_term_inst(connection, module, term_instances):
             lifecycle = instance_facts[i]['lifecycle_state']
             health = instance_facts[i]['health_status']
             log.debug("Instance {0} has state of {1},{2}".format(i,lifecycle,health ))
-            if  lifecycle == 'Terminating' or health == 'Unhealthy':
+            if lifecycle == 'Terminating' or health == 'Unhealthy':
                 count += 1
         time.sleep(10)
 

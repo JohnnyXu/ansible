@@ -28,7 +28,7 @@ author: "Rick Mendes (@rickmendes)"
 options:
   instance_id:
     description:
-      - The instance id to get the password data from. 
+      - The instance id to get the password data from.
     required: true
   key_file:
     description:
@@ -37,7 +37,7 @@ options:
   key_passphrase:
     version_added: "2.0"
     description:
-      - The passphrase for the instance key pair. The key must use DES or 3DES encryption for this module to decrypt it. You can use openssl to convert your password protected keys if they do not use DES or 3DES. ex) openssl rsa -in current_key -out new_key -des3. 
+      - The passphrase for the instance key pair. The key must use DES or 3DES encryption for this module to decrypt it. You can use openssl to convert your password protected keys if they do not use DES or 3DES. ex) openssl rsa -in current_key -out new_key -des3.
     required: false
     default: null
   wait:
@@ -92,7 +92,6 @@ tasks:
 '''
 
 from base64 import b64decode
-from os.path import expanduser
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 import datetime
@@ -106,12 +105,12 @@ except ImportError:
 def main():
     argument_spec = ec2_argument_spec()
     argument_spec.update(dict(
-            instance_id = dict(required=True),
-            key_file = dict(required=True),
-            key_passphrase = dict(no_log=True, default=None, required=False),
-            wait = dict(type='bool', default=False, required=False),
-            wait_timeout = dict(default=120, required=False),
-        )
+        instance_id = dict(required=True),
+        key_file = dict(required=True, type='path'),
+        key_passphrase = dict(no_log=True, default=None, required=False),
+        wait = dict(type='bool', default=False, required=False),
+        wait_timeout = dict(default=120, required=False),
+    )
     )
     module = AnsibleModule(argument_spec=argument_spec)
 
@@ -119,7 +118,7 @@ def main():
         module.fail_json(msg='Boto required for this module.')
 
     instance_id = module.params.get('instance_id')
-    key_file = expanduser(module.params.get('key_file'))
+    key_file = module.params.get('key_file')
     key_passphrase = module.params.get('key_passphrase')
     wait = module.params.get('wait')
     wait_timeout = int(module.params.get('wait_timeout'))
@@ -163,7 +162,7 @@ def main():
     except ValueError as e:
         decrypted = None
 
-    if decrypted == None:
+    if decrypted is None:
         module.exit_json(win_password='', changed=False)
     else:
         if wait:

@@ -342,7 +342,7 @@ def main():
     if monitors:
         monitors = []
         for monitor in module.params['monitors']:
-                monitors.append(fq_name(partition, monitor))
+            monitors.append(fq_name(partition, monitor))
 
     # sanity check user supplied values
     if state == 'absent' and host is not None:
@@ -461,7 +461,7 @@ def main():
     module.exit_json(**result)
 
 from ansible.module_utils.basic import *
-from ansible.module_utils.f5 import *
+from ansible.module_utils.f5_utils import *
 
 if __name__ == '__main__':
     main()

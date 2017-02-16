@@ -33,7 +33,7 @@ version_added: 2.1
 requirements: ['git']
 short_description: Read and write git configuration
 description:
-  - The M(git_config) module changes git configuration by invoking 'git config'.
+  - The C(git_config) module changes git configuration by invoking 'git config'.
     This is needed if you don't want to use M(template) for the entire git
     config file (e.g. because you need to change just C(user.email) in
     /etc/.git/config).  Solutions involving M(command) are cumbersone or
@@ -171,9 +171,7 @@ def main():
         required_one_of=[['list_all', 'name']],
         supports_check_mode=True,
     )
-    git_path = module.get_bin_path('git')
-    if not git_path:
-        module.fail_json(msg="Could not find git. Please ensure it is installed.")
+    git_path = module.get_bin_path('git', True)
 
     params = module.params
     # We check error message for a pattern, so we need to make sure the messages appear in the form we're expecting.

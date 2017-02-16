@@ -204,7 +204,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
             lines2.append('        %s' % line)
 
         vaulted_var = '\n'.join(lines2)
-        tagged_vaulted_var = u"""!vault-encrypted |\n%s""" % vaulted_var
+        tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
         return tagged_vaulted_var
 
     def _build_stream(self, yaml_text):
@@ -259,7 +259,9 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         different_var = u"""A different string that is not the same as the first one."""
         different_vaulted_var = self._encrypt_plaintext(different_var)
 
-        yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s\nanother_secret: %s\ndifferent_secret: %s""" % (tagged_vaulted_var, another_vaulted_var, different_vaulted_var)
+        yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s\nanother_secret: %s\ndifferent_secret: %s""" % (tagged_vaulted_var,
+                                                                                                                          another_vaulted_var,
+                                                                                                                          different_vaulted_var)
 
         data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         vault_string = data_from_yaml['the_secret']

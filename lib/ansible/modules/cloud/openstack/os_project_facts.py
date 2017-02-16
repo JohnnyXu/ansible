@@ -14,13 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
-
-try:
-    import shade
-    HAS_SHADE = True
-except ImportError:
-    HAS_SHADE = False
-
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '1.0'}
@@ -70,16 +63,15 @@ EXAMPLES = '''
     var: openstack_projects
 
 # Gather facts about a previously created project in a specific domain
-- os_project_facts
+- os_project_facts:
     cloud: awesomecloud
     name: demoproject
     domain: admindomain
 - debug:
     var: openstack_projects
 
-# Gather facts about a previously created project in a specific domain
-  with filter
-- os_project_facts
+# Gather facts about a previously created project in a specific domain with filter
+- os_project_facts:
     cloud: awesomecloud
     name: demoproject
     domain: admindomain
@@ -96,7 +88,7 @@ openstack_projects:
     returned: always, but can be null
     type: complex
     contains:
-        id: 
+        id:
             description: Unique UUID.
             returned: success
             type: string
@@ -117,6 +109,13 @@ openstack_projects:
             returned: success
             type: bool
 '''
+
+try:
+    import shade
+    HAS_SHADE = True
+except ImportError:
+    HAS_SHADE = False
+
 
 def main():
 

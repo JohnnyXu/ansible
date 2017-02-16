@@ -175,7 +175,7 @@ EXAMPLES = '''
 
 # Modify the interface to enable the delete_on_terminaton flag
 - ec2_eni:
-    eni_id: {{ "eni.interface.id" }}
+    eni_id: "{{ eni.interface.id }}"
     delete_on_termination: true
 
 '''
@@ -532,12 +532,12 @@ def main():
     module = AnsibleModule(argument_spec=argument_spec,
                            mutually_exclusive=[
                                ['secondary_private_ip_addresses', 'secondary_private_ip_address_count']
-                            ],
+                               ],
                            required_if=([
                                ('state', 'present', ['subnet_id']),
                                ('state', 'absent', ['eni_id']),
                                ('attached', True, ['instance_id'])
-                            ])
+                               ])
                            )
 
     if not HAS_BOTO:

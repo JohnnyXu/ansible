@@ -33,7 +33,7 @@ description:
     against a provided candidate configuration. If there are changes, the
     candidate configuration is merged with the current configuration and
     pushed into OpenSwitch
-deprecated: Deprecated in 2.2. Use ops_config instead
+deprecated: Deprecated in 2.2. Use M(ops_config) instead.
 extends_documentation_fragment: openswitch
 options:
   src:
@@ -76,14 +76,14 @@ options:
 
 EXAMPLES = """
 - name: set hostname with file lookup
-    ops_template:
+  ops_template:
     src: ./hostname.json
     backup: yes
     remote_user: admin
     become: yes
 
 - name: set hostname with var
-    ops_template:
+  ops_template:
     src: "{{ config }}"
     remote_user: admin
     become: yes

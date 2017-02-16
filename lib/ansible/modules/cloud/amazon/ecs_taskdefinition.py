@@ -90,7 +90,7 @@ EXAMPLES = '''
         hostPort: 80
     - name: busybox
       command:
-        - "/bin/sh -c \"while true; do echo '<html> <head> <title>Amazon ECS Sample App</title> <style>body {margin-top: 40px; background-color: #333;} </style> </head><body> <div style=color:white;text-align:center> <h1>Amazon ECS Sample App</h1> <h2>Congratulations!</h2> <p>Your application is now running on a container in Amazon ECS.</p>' > top; /bin/date > date ; echo '</div></body></html>' > bottom; cat top date bottom > /usr/local/apache2/htdocs/index.html ; sleep 1; done\""
+        - /bin/sh -c "while true; do echo '<html><head><title>Amazon ECS Sample App</title></head><body><div><h1>Amazon ECS Sample App</h1><h2>Congratulations!</h2><p>Your application is now running on a container in Amazon ECS.</p>' > top; /bin/date > date ; echo '</div></body></html>' > bottom; cat top date bottom > /usr/local/apache2/htdocs/index.html ; sleep 1; done"
       cpu: 10
       entryPoint:
       - sh
@@ -125,8 +125,7 @@ except ImportError:
     HAS_BOTO3 = False
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ec2 import boto3_conn, ec2_argument_spec, get_aws_connection_info
-
+from ansible.module_utils.ec2 import boto3_conn, camel_dict_to_snake_dict, ec2_argument_spec, get_aws_connection_info
 
 class EcsTaskManager:
     """Handles ECS Tasks"""
@@ -225,10 +224,10 @@ def main():
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     if not HAS_BOTO:
-      module.fail_json(msg='boto is required.')
+        module.fail_json(msg='boto is required.')
 
     if not HAS_BOTO3:
-      module.fail_json(msg='boto3 is required.')
+        module.fail_json(msg='boto3 is required.')
 
     task_to_describe = None
     task_mgr = EcsTaskManager(module)
@@ -256,9 +255,9 @@ def main():
                 # We cannot reactivate an inactive revision
                 module.fail_json(msg="A task in family '%s' already exists for revsion %d, but it is inactive" % (family, revision))
             elif not existing:
-                if len(existing_definitions_in_family) == 0 and revision != 1:
+                if not existing_definitions_in_family and revision != 1:
                     module.fail_json(msg="You have specified a revision of %d but a created revision would be 1" % revision)
-                elif existing_definitions_in_family[-1]['revision'] + 1 != revision:
+                elif existing_definitions_in_family and existing_definitions_in_family[-1]['revision'] + 1 != revision:
                     module.fail_json(msg="You have specified a revision of %d but a created revision would be %d" % (revision, existing_definitions_in_family[-1]['revision'] + 1))
         else:
             existing = None

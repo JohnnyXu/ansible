@@ -26,7 +26,7 @@ DOCUMENTATION = '''
 module: shell
 short_description: Execute commands in nodes.
 description:
-     - The M(shell) module takes the command name followed by a list of space-delimited arguments.
+     - The C(shell) module takes the command name followed by a list of space-delimited arguments.
        It is almost exactly like the M(command) module but runs
        the command through a shell (C(/bin/sh)) on the remote node.
 version_added: "0.2"
@@ -69,8 +69,8 @@ options:
 notes:
    -  If you want to execute a command securely and predictably, it may be
       better to use the M(command) module instead. Best practices when writing
-      playbooks will follow the trend of using M(command) unless M(shell) is
-      explicitly required. When running ad-hoc commands, use your best
+      playbooks will follow the trend of using M(command) unless the C(shell)
+      module is explicitly required. When running ad-hoc commands, use your best
       judgement.
    -  To sanitize any variables passed to the shell module, you should use
       "{{ var | quote }}" instead of just "{{ var }}" to make sure they don't include evil things like semicolons.
@@ -82,28 +82,48 @@ author:
 '''
 
 EXAMPLES = '''
-# Execute the command in remote shell; stdout goes to the specified
-# file on the remote.
-- shell: somescript.sh >> somelog.txt
+- name: Execute the command in remote shell; stdout goes to the specified file on the remote.
+  shell: somescript.sh >> somelog.txt
 
-# Change the working directory to somedir/ before executing the command.
-- shell: somescript.sh >> somelog.txt
+- name: Change the working directory to somedir/ before executing the command.
+  shell: somescript.sh >> somelog.txt
   args:
     chdir: somedir/
 
-# You can also use the 'args' form to provide the options. This command
-# will change the working directory to somedir/ and will only run when
-# somedir/somelog.txt doesn't exist.
-- shell: somescript.sh >> somelog.txt
+# You can also use the 'args' form to provide the options.
+- name: This command will change the working directory to somedir/ and will only run when somedir/somelog.txt doesn't exist.
+  shell: somescript.sh >> somelog.txt
   args:
     chdir: somedir/
     creates: somelog.txt
 
-# Run a command that uses non-posix shell-isms (in this example /bin/sh
-# doesn't handle redirection and wildcards together but bash does)
-- shell: cat < /tmp/*txt
+- name: Run a command that uses non-posix shell-isms (in this example /bin/sh doesn't handle redirection and wildcards together but bash does)
+  shell: cat < /tmp/*txt
   args:
     executable: /bin/bash
+
+- name: Run a command using a templated variable (always use quote filter to avoid injection)
+  shell: cat {{ myfile|quote }}
+
+# You can use shell to run other executables to perform actions inline
+- name: Run expect to wait for a successful PXE boot via out-of-band CIMC
+  shell: |
+    set timeout 300
+    spawn ssh admin@{{ cimc_host }}
+
+    expect "password:"
+    send "{{ cimc_password }}\\n"
+
+    expect "\\n{{ cimc_name }}"
+    send "connect host\\n"
+
+    expect "pxeboot.n12"
+    send "\\n"
+
+    exit 0
+  args:
+    executable: /usr/bin/expect
+  delegate_to: localhost
 '''
 
 RETURN = '''

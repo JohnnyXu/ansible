@@ -19,24 +19,6 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import traceback
-
-try:
-    import ovirtsdk4.types as otypes
-except ImportError:
-    pass
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ovirt import (
-    BaseModule,
-    check_sdk,
-    create_connection,
-    equal,
-    ovirt_full_argument_spec,
-    search_by_name,
-)
-
-
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '1.0'}
@@ -131,6 +113,23 @@ agent:
     returned: On success if agent is found.
 '''
 
+import traceback
+
+try:
+    import ovirtsdk4.types as otypes
+except ImportError:
+    pass
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ovirt import (
+    BaseModule,
+    check_sdk,
+    create_connection,
+    equal,
+    ovirt_full_argument_spec,
+    search_by_name,
+)
+
 
 class HostModule(BaseModule):
     def build_entity(self):
@@ -183,7 +182,7 @@ def main():
         name=dict(default=None, required=True, aliases=['host']),
         address=dict(default=None),
         username=dict(default=None),
-        password=dict(default=None),
+        password=dict(default=None, no_log=True),
         type=dict(default=None),
         port=dict(default=None, type='int'),
         slot=dict(default=None),

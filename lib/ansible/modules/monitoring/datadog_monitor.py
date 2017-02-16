@@ -122,7 +122,7 @@ datadog_monitor:
   type: "metric alert"
   name: "Test monitor"
   state: "present"
-  query: "datadog.agent.up".over("host:host1").last(2).count_by_status()"
+  query: "datadog.agent.up.over('host:host1').last(2).count_by_status()"
   message: "Host [[host.name]] with IP [[host.ip]] is failing to report to datadog."
   api_key: "9775a026f1ca7d1c6c5af9d94d9595a4"
   app_key: "87ce4a24b5553d2e482ea8a8500e71b8ad4554ff"
@@ -307,7 +307,7 @@ def delete_monitor(module):
 def mute_monitor(module):
     monitor = _get_monitor(module)
     if not monitor:
-         module.fail_json(msg="Monitor %s not found!" % module.params['name'])
+        module.fail_json(msg="Monitor %s not found!" % module.params['name'])
     elif monitor['options']['silenced']:
         module.fail_json(msg="Monitor is already muted. Datadog does not allow to modify muted alerts, consider unmuting it first.")
     elif (module.params['silenced'] is not None
@@ -327,7 +327,7 @@ def mute_monitor(module):
 def unmute_monitor(module):
     monitor = _get_monitor(module)
     if not monitor:
-         module.fail_json(msg="Monitor %s not found!" % module.params['name'])
+        module.fail_json(msg="Monitor %s not found!" % module.params['name'])
     elif not monitor['options']['silenced']:
         module.exit_json(changed=False)
     try:

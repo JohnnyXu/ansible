@@ -45,7 +45,7 @@ options:
     version_added: "2.2"
   state:
     description:
-      - Specifies the state of the M(junos_netconf) resource on
+      - Specifies the state of the C(junos_netconf) resource on
         the remote device.  If the I(state) argument is set to
         I(present) the netconf service will be configured.  If the
         I(state) argument is set to I(absent) the netconf service
@@ -58,6 +58,7 @@ options:
 EXAMPLES = """
 # Note: examples below use the following provider dict to handle
 #       transport and authentication to the node.
+---
 vars:
   cli:
     host: "{{ inventory_hostname }}"
@@ -65,6 +66,7 @@ vars:
     password: Ansible
     transport: cli
 
+---
 - name: enable netconf service on port 830
   junos_netconf:
     listens_on: 830

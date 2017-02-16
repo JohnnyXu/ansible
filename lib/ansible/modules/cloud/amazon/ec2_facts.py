@@ -67,9 +67,9 @@ class Ec2Metadata(object):
 
     AWS_REGIONS = ('ap-northeast-1',
                    'ap-northeast-2',
+                   'ap-south-1',
                    'ap-southeast-1',
                    'ap-southeast-2',
-                   'ap-south-1',
                    'ca-central-1',
                    'eu-central-1',
                    'eu-west-1',
@@ -79,7 +79,7 @@ class Ec2Metadata(object):
                    'us-east-2',
                    'us-west-1',
                    'us-west-2',
-                   'us-gov-west-1'
+                   'us-gov-west-1',
                    )
 
     def __init__(self, module, ec2_metadata_uri=None, ec2_sshdata_uri=None, ec2_userdata_uri=None):
@@ -176,8 +176,8 @@ def main():
     argument_spec = url_argument_spec()
 
     module = AnsibleModule(
-            argument_spec=argument_spec,
-            supports_check_mode=True,
+        argument_spec=argument_spec,
+        supports_check_mode=True,
     )
 
     ec2_facts = Ec2Metadata(module).run()

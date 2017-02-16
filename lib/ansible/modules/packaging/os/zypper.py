@@ -26,9 +26,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-from xml.dom.minidom import parseString as parseXML
-import re
-
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'committer',
                     'version': '1.0'}
@@ -95,7 +92,7 @@ options:
     update_cache:
         version_added: "2.2"
         description:
-          - Run the equivalent of C(zypper refresh) before the operation.
+          - Run the equivalent of C(zypper refresh) before the operation. Disabled in check mode.
         required: false
         default: "no"
         choices: [ "yes", "no" ]
@@ -150,12 +147,12 @@ EXAMPLES = '''
 
 # Update all packages
 - zypper:
-    name: *
+    name: '*'
     state: latest
 
 # Apply all available patches
 - zypper:
-    name: *
+    name: '*'
     state: latest
     type: patch
 
@@ -168,8 +165,20 @@ EXAMPLES = '''
 # Install specific version (possible comparisons: <, >, <=, >=, =)
 - zypper:
     name: 'docker>=1.10'
-    state: installed
+    state: present
+
+# Wait 20 seconds to acquire the lock before failing
+- zypper:
+    name: mosh
+    state: present
+  environment:
+    ZYPP_LOCK_TIMEOUT: 20
 '''
+
+import xml
+from ansible.module_utils.pycompat24 import get_exception
+from xml.dom.minidom import parseString as parseXML
+import re
 
 
 def split_name_version(name):
@@ -232,7 +241,13 @@ def get_installed_state(m, packages):
 def parse_zypper_xml(m, cmd, fail_not_found=True, packages=None):
     rc, stdout, stderr = m.run_command(cmd, check_rc=False)
 
-    dom = parseXML(stdout)
+    try:
+        dom = parseXML(stdout)
+    except xml.parsers.expat.ExpatError:
+        e = get_exception()
+        m.fail_json(msg="Failed to parse zypper xml output: %s" % e,
+                    rc=rc, stdout=stdout, stderr=stderr, cmd=cmd)
+
     if rc == 104:
         # exit code 104 is ZYPPER_EXIT_INF_CAP_NOT_FOUND (no packages found)
         if fail_not_found:
@@ -366,7 +381,7 @@ def package_present(m, name, want_latest):
 
 def package_update_all(m):
     "run update or patch on all available packages"
-    
+
     retvals = {'rc': 0, 'stdout': '', 'stderr': ''}
     if m.params['type'] == 'patch':
         cmdname = 'patch'
@@ -442,7 +457,7 @@ def main():
     name = filter(None, name)
 
     # Refresh repositories
-    if update_cache:
+    if update_cache and not module.check_mode:
         retvals = repo_refresh(module)
 
         if retvals['rc'] != 0:

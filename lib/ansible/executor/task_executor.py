@@ -407,8 +407,8 @@ class TaskExecutor:
         # variable not being present which would otherwise cause validation to fail
         try:
             if not self._task.evaluate_conditional(templar, variables):
-                display.debug("when evaluation failed, skipping this task")
-                return dict(changed=False, skipped=True, skip_reason='Conditional check failed', _ansible_no_log=self._play_context.no_log)
+                display.debug("when evaluation is False, skipping this task")
+                return dict(changed=False, skipped=True, skip_reason='Conditional result was False', _ansible_no_log=self._play_context.no_log)
         except AnsibleError:
             # loop error takes precedence
             if self._loop_eval_error is not None:
@@ -517,6 +517,7 @@ class TaskExecutor:
             if self._task.async > 0:
                 if self._task.poll > 0 and not result.get('skipped'):
                     result = self._poll_async_result(result=result, templar=templar, task_vars=vars_copy)
+                    #FIXME callback 'v2_runner_on_async_poll' here
 
                 # ensure no log is preserved
                 result["_ansible_no_log"] = self._play_context.no_log
@@ -619,6 +620,7 @@ class TaskExecutor:
 
         async_task = Task().load(dict(action='async_status jid=%s' % async_jid))
 
+        #FIXME: this is no longer the case, normal takes care of all, see if this can just be generalized
         # Because this is an async task, the action handler is async. However,
         # we need the 'normal' action handler for the status check, so get it
         # now via the action_loader
@@ -757,15 +759,16 @@ class TaskExecutor:
         Returns the correct action plugin to handle the requestion task action
         '''
 
+        network_group_modules = frozenset(['eos', 'nxos', 'ios', 'iosxr', 'junos', 'vyos'])
+        module_prefix = self._task.action.split('_')[0]
+
+        # let action plugin override module, fallback to 'normal' action plugin otherwise
         if self._task.action in self._shared_loader_obj.action_loader:
-            if self._task.async != 0:
-                raise AnsibleError("async mode is not supported with the %s module" % self._task.action)
             handler_name = self._task.action
-        elif self._task.async == 0:
-            pc_conn = self._shared_loader_obj.connection_loader.get(self._play_context.connection, class_only=True)
-            handler_name = getattr(pc_conn, 'action_handler', 'normal')
+        elif all((module_prefix in network_group_modules, module_prefix in self._shared_loader_obj.action_loader)):
+            handler_name = module_prefix
         else:
-            handler_name = 'async'
+            handler_name = 'normal'
 
         handler = self._shared_loader_obj.action_loader.get(
             handler_name,

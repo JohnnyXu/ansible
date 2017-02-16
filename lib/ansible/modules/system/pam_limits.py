@@ -18,11 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import os.path
-import shutil
-import re
-
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '1.0'}
@@ -35,7 +30,7 @@ authors:
     - "Sebastien Rohaut (@usawa)"
 short_description: Modify Linux PAM limits
 description:
-     - The M(pam_limits) module modify PAM limits, default in /etc/security/limits.conf.
+     - The C(pam_limits) module modify PAM limits, default in /etc/security/limits.conf.
        For the full documentation, see man limits.conf(5).
 options:
   domain:
@@ -110,11 +105,17 @@ EXAMPLES = '''
 # Add or modify memlock, both soft and hard, limit for the user james with a comment.
 - pam_limits:
     domain: james
-    limit_type: -
+    limit_type: '-'
     limit_item: memlock
     value: unlimited
     comment: unlimited memory lock for james
 '''
+
+import os
+import os.path
+import shutil
+import re
+
 
 def main():
 
@@ -272,7 +273,7 @@ def main():
         nf.close()
     except:
         pass
-   
+
     res_args = dict(
         changed = changed, msg = message
     )

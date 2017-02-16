@@ -22,6 +22,10 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: omapi_host
@@ -136,6 +140,21 @@ lease:
             sample: 'mydesktop'
 '''
 
+# import module snippets
+from ansible.module_utils.basic import AnsibleModule, get_exception, to_bytes
+from ansible.module_utils.six import iteritems
+import socket
+import struct
+import binascii
+
+try:
+    from pypureomapi import Omapi, OmapiMessage, OmapiError, OmapiErrorNotFound
+    from pypureomapi import pack_ip, unpack_ip, pack_mac, unpack_mac
+    from pypureomapi import OMAPI_OP_STATUS, OMAPI_OP_UPDATE
+    pureomapi_found = True
+except ImportError:
+    pureomapi_found = False
+
 
 class OmapiHostManager:
     def __init__(self, module):
@@ -147,6 +166,12 @@ class OmapiHostManager:
         try:
             self.omapi = Omapi(self.module.params['host'], self.module.params['port'], self.module.params['key_name'],
                                self.module.params['key'])
+        except binascii.Error:
+            self.module.fail_json(msg="Unable to open OMAPI connection. 'key' is not a valid base64 key.")
+        except OmapiError:
+            e = get_exception()
+            self.module.fail_json(msg="Unable to open OMAPI connection. Ensure 'host', 'port', 'key' and 'key_name' "
+                                      "are valid. Exception was: %s" % e)
         except socket.error:
             e = get_exception()
             self.module.fail_json(msg="Unable to connect to OMAPI server: %s" % e)
@@ -300,21 +325,6 @@ def main():
     except ValueError:
         e = get_exception()
         module.fail_json(msg="OMAPI input value error: %s" % e)
-
-
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule, get_exception, to_bytes
-from ansible.module_utils.six import iteritems
-import socket
-import struct
-
-try:
-    from pypureomapi import Omapi, OmapiMessage, OmapiError, OmapiErrorNotFound
-    from pypureomapi import pack_ip, unpack_ip, pack_mac, unpack_mac
-    from pypureomapi import OMAPI_OP_STATUS, OMAPI_OP_UPDATE
-    pureomapi_found = True
-except ImportError:
-    pureomapi_found = False
 
 if __name__ == '__main__':
     main()

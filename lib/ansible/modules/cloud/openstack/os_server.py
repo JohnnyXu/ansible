@@ -18,15 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this software.  If not, see <http://www.gnu.org/licenses/>.
 
-
-try:
-    import shade
-    from shade import meta
-    HAS_SHADE = True
-except ImportError:
-    HAS_SHADE = False
-
-
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '1.0'}
@@ -307,12 +298,12 @@ EXAMPLES = '''
            username: admin
            password: admin
            project_name: admin
-         name: vm1
-         image: 4f905f38-e52a-43d2-b6ec-754a13ffb529
-         key_name: ansible_key
-         timeout: 200
-         flavor: 4
-         nics: "net-id=4cb08b20-62fe-11e5-9d70-feff819cdc9f,net-id=542f0430-62fe-11e5-9d70-feff819cdc9f..."
+        name: vm1
+        image: 4f905f38-e52a-43d2-b6ec-754a13ffb529
+        key_name: ansible_key
+        timeout: 200
+        flavor: 4
+        nics: "net-id=4cb08b20-62fe-11e5-9d70-feff819cdc9f,net-id=542f0430-62fe-11e5-9d70-feff819cdc9f..."
 
 - name: Creates a new instance and attaches to a network and passes metadata to the instance
   os_server:
@@ -345,7 +336,7 @@ EXAMPLES = '''
     key_name: ansible_key
     timeout: 200
     flavor: 4
-      network: another_network
+    network: another_network
 
 # Create a new instance with 4G of RAM on a 75G Ubuntu Trusty volume
 - name: launch a compute instance
@@ -378,6 +369,13 @@ EXAMPLES = '''
         - photos
         - music
 '''
+
+try:
+    import shade
+    from shade import meta
+    HAS_SHADE = True
+except ImportError:
+    HAS_SHADE = False
 
 
 def _exit_hostvars(module, cloud, server, changed=True):

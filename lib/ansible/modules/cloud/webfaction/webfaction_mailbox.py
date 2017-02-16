@@ -87,10 +87,10 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             mailbox_name=dict(required=True),
-            mailbox_password=dict(required=True),
+            mailbox_password=dict(required=True, no_log=True),
             state=dict(required=False, choices=['present', 'absent'], default='present'),
             login_name=dict(required=True),
-            login_password=dict(required=True),
+            login_password=dict(required=True, no_log=True),
         ),
         supports_check_mode=True
     )
@@ -107,7 +107,7 @@ def main():
     existing_mailbox = mailbox_name in mailbox_list
 
     result = {}
-    
+
     # Here's where the real stuff happens
 
     if site_state == 'present':

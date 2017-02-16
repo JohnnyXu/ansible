@@ -78,7 +78,7 @@ EXAMPLES = '''
         dest: /etc/network/interfaces
       notify: restart networking
 
- handlers:
+  handlers:
    - name: restart switchd
      service:
       name: switchd
@@ -89,10 +89,7 @@ EXAMPLES = '''
       state: reloaded
 
 # Force all switches to accept a new license. Typically not needed
-ansible -m cl_license -a "src='http://10.1.1.1/new_lic' force=yes" -u root all
-
-----
-
+# ansible -m cl_license -a "src='http://10.1.1.1/new_lic' force=yes" -u root all
 '''
 
 RETURN = '''
@@ -112,10 +109,10 @@ CL_LICENSE_PATH='/usr/cumulus/bin/cl-license'
 
 def install_license(module):
     # license is not installed, install it
-        _url = module.params.get('src')
-        (_rc, out, _err) = module.run_command("%s -i %s" % (CL_LICENSE_PATH, _url))
-        if _rc > 0:
-            module.fail_json(msg=_err)
+    _url = module.params.get('src')
+    (_rc, out, _err) = module.run_command("%s -i %s" % (CL_LICENSE_PATH, _url))
+    if _rc > 0:
+        module.fail_json(msg=_err)
 
 
 def main():

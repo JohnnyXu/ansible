@@ -12,6 +12,8 @@ variables needed for Boto have already been set:
     export AWS_ACCESS_KEY_ID='AK123'
     export AWS_SECRET_ACCESS_KEY='abc123'
 
+optional region environement variable if region is 'auto'
+
 This script also assumes there is an ec2.ini file alongside it.  To specify a
 different path to ec2.ini, define the EC2_INI_PATH environment variable:
 
@@ -162,6 +164,8 @@ class Ec2Inventory(object):
         # and availability zones
         self.inventory = self._empty_inventory()
 
+        self.aws_account_id = None
+
         # Index of hostname (address) to instance ID
         self.index = {}
 
@@ -245,6 +249,11 @@ class Ec2Inventory(object):
                         self.regions.append(regionInfo.name)
         else:
             self.regions = configRegions.split(",")
+        if 'auto' in self.regions:
+            env_region = os.environ.get('AWS_REGION')
+            if env_region is None:
+                env_region = os.environ.get('AWS_DEFAULT_REGION')
+            self.regions = [ env_region ]
 
         # Destination addresses
         self.destination_variable = config.get('ec2', 'destination_variable')
@@ -265,6 +274,10 @@ class Ec2Inventory(object):
 
         # Route53
         self.route53_enabled = config.getboolean('ec2', 'route53')
+        if config.has_option('ec2', 'route53_hostnames'):
+            self.route53_hostnames = config.get('ec2', 'route53_hostnames')
+        else:
+            self.route53_hostnames = None
         self.route53_excluded_zones = []
         if config.has_option('ec2', 'route53_excluded_zones'):
             self.route53_excluded_zones.extend(
@@ -306,13 +319,13 @@ class Ec2Inventory(object):
         if self.all_instances:
             self.ec2_instance_states = ec2_valid_instance_states
         elif config.has_option('ec2', 'instance_states'):
-          for instance_state in config.get('ec2', 'instance_states').split(','):
-            instance_state = instance_state.strip()
-            if instance_state not in ec2_valid_instance_states:
-              continue
-            self.ec2_instance_states.append(instance_state)
+            for instance_state in config.get('ec2', 'instance_states').split(','):
+                instance_state = instance_state.strip()
+                if instance_state not in ec2_valid_instance_states:
+                    continue
+                self.ec2_instance_states.append(instance_state)
         else:
-          self.ec2_instance_states = ['running']
+            self.ec2_instance_states = ['running']
 
         # Return all RDS instances? (if RDS is enabled)
         if config.has_option('ec2', 'all_rds_instances') and self.rds_enabled:
@@ -338,8 +351,8 @@ class Ec2Inventory(object):
         else:
             self.all_elasticache_nodes = False
 
-        # boto configuration profile (prefer CLI argument)
-        self.boto_profile = self.args.boto_profile
+        # boto configuration profile (prefer CLI argument then environment variables then config file)
+        self.boto_profile = self.args.boto_profile or os.environ.get('AWS_PROFILE')
         if config.has_option('ec2', 'boto_profile') and not self.boto_profile:
             self.boto_profile = config.get('ec2', 'boto_profile')
 
@@ -374,14 +387,11 @@ class Ec2Inventory(object):
             os.makedirs(cache_dir)
 
         cache_name = 'ansible-ec2'
-        aws_profile = lambda: (self.boto_profile or
-                               os.environ.get('AWS_PROFILE') or
-                               os.environ.get('AWS_ACCESS_KEY_ID') or
-                               self.credentials.get('aws_access_key_id', None))
-        if aws_profile():
-            cache_name = '%s-%s' % (cache_name, aws_profile())
-        self.cache_path_cache = cache_dir + "/%s.cache" % cache_name
-        self.cache_path_index = cache_dir + "/%s.index" % cache_name
+        cache_id = self.boto_profile or os.environ.get('AWS_ACCESS_KEY_ID', self.credentials.get('aws_access_key_id'))
+        if cache_id:
+            cache_name = '%s-%s' % (cache_name, cache_id)
+        self.cache_path_cache = os.path.join(cache_dir, "%s.cache" % cache_name)
+        self.cache_path_index = os.path.join(cache_dir, "%s.index" % cache_name)
         self.cache_max_age = config.getint('ec2', 'cache_max_age')
 
         if config.has_option('ec2', 'expand_csv_tags'):
@@ -408,6 +418,7 @@ class Ec2Inventory(object):
             'group_by_availability_zone',
             'group_by_ami_id',
             'group_by_instance_type',
+            'group_by_instance_state',
             'group_by_key_pair',
             'group_by_vpc_id',
             'group_by_security_group',
@@ -420,6 +431,7 @@ class Ec2Inventory(object):
             'group_by_elasticache_cluster',
             'group_by_elasticache_parameter_group',
             'group_by_elasticache_replication_group',
+            'group_by_aws_account',
         ]
         for option in group_by_options:
             if config.has_option('ec2', option):
@@ -439,13 +451,19 @@ class Ec2Inventory(object):
 
         # Do we need to exclude hosts that match a pattern?
         try:
-            pattern_exclude = config.get('ec2', 'pattern_exclude');
+            pattern_exclude = config.get('ec2', 'pattern_exclude')
             if pattern_exclude and len(pattern_exclude) > 0:
                 self.pattern_exclude = re.compile(pattern_exclude)
             else:
                 self.pattern_exclude = None
         except configparser.NoOptionError:
             self.pattern_exclude = None
+
+        # Do we want to stack multiple filters?
+        if config.has_option('ec2', 'stack_filters'):
+            self.stack_filters = config.getboolean('ec2', 'stack_filters')
+        else:
+            self.stack_filters = False
 
         # Instance filters (see boto and EC2 API docs). Ignore invalid filters.
         self.ec2_instance_filters = defaultdict(list)
@@ -534,8 +552,14 @@ class Ec2Inventory(object):
             conn = self.connect(region)
             reservations = []
             if self.ec2_instance_filters:
-                for filter_key, filter_values in self.ec2_instance_filters.items():
-                    reservations.extend(conn.get_all_instances(filters = { filter_key : filter_values }))
+                if self.stack_filters:
+                    filters_dict = {}
+                    for filter_key, filter_values in self.ec2_instance_filters.items():
+                        filters_dict[filter_key] = filter_values
+                    reservations.extend(conn.get_all_instances(filters = filters_dict))
+                else:
+                    for filter_key, filter_values in self.ec2_instance_filters.items():
+                        reservations.extend(conn.get_all_instances(filters = { filter_key : filter_values }))
             else:
                 reservations = conn.get_all_instances()
 
@@ -554,6 +578,9 @@ class Ec2Inventory(object):
             tags_by_instance_id = defaultdict(dict)
             for tag in tags:
                 tags_by_instance_id[tag.res_id][tag.name] = tag.value
+
+            if (not self.aws_account_id) and reservations:
+                self.aws_account_id = reservations[0].owner_id
 
             for reservation in reservations:
                 for instance in reservation.instances:
@@ -786,9 +813,19 @@ class Ec2Inventory(object):
             else:
                 hostname = getattr(instance, self.hostname_variable)
 
+        # set the hostname from route53
+        if self.route53_enabled and self.route53_hostnames:
+            route53_names = self.get_instance_route53_names(instance)
+            for name in route53_names:
+                if name.endswith(self.route53_hostnames):
+                    hostname = name
+
         # If we can't get a nice hostname, use the destination address
         if not hostname:
             hostname = dest
+        # to_safe strips hostname characters like dots, so don't strip route53 hostnames
+        elif self.route53_enabled and self.route53_hostnames and hostname.endswith(self.route53_hostnames):
+            hostname = hostname.lower()
         else:
             hostname = self.to_safe(hostname).lower()
 
@@ -837,6 +874,13 @@ class Ec2Inventory(object):
             if self.nested_groups:
                 self.push_group(self.inventory, 'types', type_name)
 
+        # Inventory: Group by instance state
+        if self.group_by_instance_state:
+            state_name = self.to_safe('instance_state_' + instance.state)
+            self.push(self.inventory, state_name, hostname)
+            if self.nested_groups:
+                self.push_group(self.inventory, 'instance_states', state_name)
+
         # Inventory: Group by key pair
         if self.group_by_key_pair and instance.key_name:
             key_name = self.to_safe('key_' + instance.key_name)
@@ -862,6 +906,12 @@ class Ec2Inventory(object):
             except AttributeError:
                 self.fail_with_error('\n'.join(['Package boto seems a bit older.',
                                             'Please upgrade boto >= 2.3.0.']))
+
+        # Inventory: Group by AWS account ID
+        if self.group_by_aws_account:
+            self.push(self.inventory, self.aws_account_id, dest)
+            if self.nested_groups:
+                self.push_group(self.inventory, 'accounts', self.aws_account_id)
 
         # Inventory: Group by tag keys
         if self.group_by_tag_keys:
@@ -1304,7 +1354,7 @@ class Ec2Inventory(object):
                 instance_vars[key] = value
             elif isinstance(value, six.string_types):
                 instance_vars[key] = value.strip()
-            elif type(value) == type(None):
+            elif value is None:
                 instance_vars[key] = ''
             elif key == 'ec2_region':
                 instance_vars[key] = value.name
@@ -1334,6 +1384,8 @@ class Ec2Inventory(object):
                 #print key
                 #print type(value)
                 #print value
+
+        instance_vars[self.to_safe('ec2_account_id')] = self.aws_account_id
 
         return instance_vars
 
@@ -1413,7 +1465,7 @@ class Ec2Inventory(object):
 
             # Target: Everything
             # Replace None by an empty string
-            elif type(value) == type(None):
+            elif value is None:
                 host_info[key] = ''
 
             else:
